@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Custom Pet Adventure</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1120;
+      color: #eef;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-height: 100vh;
+      padding: 14px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    #wrapper {
+      display: flex;
+      gap: 14px;
+      max-width: 980px;
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    canvas {
+      border: 4px solid #405070;
+      background: white;
+      width: 800px;
+      height: 500px;
+      image-rendering: pixelated;
+    }
+    .panel {
+      background: rgba(20, 35, 60, 0.92);
+      border: 1px solid #446;
+      border-radius: 12px;
+      padding: 12px 14px;
+      min-width: 240px;
+      box-sizing: border-box;
+    }
+    .panel strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+      letter-spacing: 0.03em;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 1px solid #657;
+      background: #2e486b;
+      color: #eef;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #3d5d8b;
+    }
+    #battle-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+    }
+    #battle-card {
+      background: #162342;
+      border: 2px solid #77a;
+      border-radius: 18px;
+      width: 760px;
+      max-width: calc(100% - 20px);
+      padding: 20px;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .battle-side {
+      flex: 1 1 320px;
+      min-width: 300px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid #446;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .legendary {
+      color: gold;
+      font-weight: 700;
+    }
+    .shop-button {
+      width: 100%;
+      margin-top: 4px;
+      text-align: left;
+    }
+    .health-bar {
+      width: 100%;
+      height: 12px;
+      background: #314862;
+      border: 1px solid #57738f;
+      border-radius: 7px;
+      margin: 8px 0 4px;
+      overflow: hidden;
+    }
+    .health-fill {
+      height: 100%;
+      background: #59d4a2;
+      border-radius: 6px;
+      transition: width 0.2s ease;
+    }
+    .health-fill.low {
+      background: #e65a5a;
+    }
+    .battle-log {
+      background: #0f1f33;
+      border: 1px solid #446;
+      border-radius: 10px;
+      min-height: 140px;
+      padding: 10px;
+      margin-top: 12px;
+      overflow-y: auto;
+      max-height: 170px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .battle-log p {
+      margin: 4px 0;
+    }
+    .battle-switch {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .party-button {
+      width: 100%;
+      border: 1px solid #557;
+      background: #22375a;
+      color: #eef;
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+    }
+    .party-button.active {
+      background: #3e6bb3;
+      border-color: #87a;
+    }
+    .party-button.fainted {
+      background: #3a2933;
+      color: #999;
+    }
+    #shopPanel {
+      display: grid;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="codeGate" style="position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(10,16,32,0.98); z-index:2000; display:flex; align-items:center; justify-content:center; flex-direction:column; pointer-events:auto;">
+    <div style="background:#1a2336; border-radius:18px; padding:36px 44px; box-shadow:0 6px 32px #000a; text-align:center; border:2px solid #77a; max-width:90vw;">
+      <h2 style="color:#fff; margin-bottom:18px;">Enter Access Code</h2>
+      <input id="accessCodeInput" type="password" maxlength="16" style="font-size:1.2em; padding:8px 16px; border-radius:8px; border:1px solid #77a; margin-bottom:12px;" placeholder="Access Code">
+      <div><button id="accessCodeBtn" style="padding:10px 24px; font-size:1.1em; border-radius:8px; background:#3e6bb3; color:#fff; border:none; cursor:pointer;">Enter</button></div>
+      <div id="accessCodeMsg" style="color:#e65a5a; margin-top:10px; min-height:24px;"></div>
+    </div>
+  </div>
+  <h1>Custom Pet Adventure</h1>
+  <div id="starterSelection" style="display: none; text-align: center; margin: 20px;">
+    <p>Choose your starter Spocketbot:</p>
+    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+      <button id="chooseFlarecub" style="padding: 10px 20px; font-size: 16px;">Flarecub (Fire)</button>
+      <button id="chooseLeafmouse" style="padding: 10px 20px; font-size: 16px;">Leafmouse (Grass)</button>
+      <button id="chooseStoneclaw" style="padding: 10px 20px; font-size: 16px;">Stoneclaw (Rock)</button>
+    </div>
+  </div>
+  <div id="evolutionPopup" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; flex-direction:column;">
+    <div style="background:#1a2336; border-radius:18px; padding:36px 44px; box-shadow:0 6px 32px #000a; text-align:center; border:2px solid #77a; max-width:90vw;">
+      <h2 style="color:gold; margin-bottom:18px;">Evolution!</h2>
+      <div id="evolutionSprite" style="margin-bottom:18px;"></div>
+      <div id="evolutionName" style="font-size:1.5em; color:#fff; font-weight:bold;"></div>
+      <div style="margin-top:18px;"><button id="closeEvolutionBtn" style="padding:10px 24px; font-size:1.1em; border-radius:8px; background:#3e6bb3; color:#fff; border:none; cursor:pointer;">Continue</button></div>
+    </div>
+  </div>
+  <div id="wrapper">
+    <canvas id="game" width="800" height="500"></canvas>
+    <div class="panel" style="flex: 0 0 260px;">
+      <strong>Game Info</strong>
+      <p>Move: <strong>W A S D</strong></p>
+      <p>Walk into a wild animal to start a battle.</p>
+      <p>Enter a heal station to fully restore your active pet.</p>
+      <p>Use the shop to buy different ball types.</p>
+      <p>Defeat or capture wild pets to earn money.</p>
+    </div>
+    <div class="panel" style="flex: 0 0 260px;">
+      <strong>Status</strong>
+      <p>State: <span id="gameState">Explore</span></p>
+      <p>Money: <span id="moneyCount">0</span>⚡</p>
+      <p id="message">Use W A S D to move around.</p>
+      <div id="petInfo"></div>
+    </div>
+    <div class="panel" style="flex: 0 0 260px;">
+      <strong>Inventory</strong>
+      <div id="inventoryPanel"></div>
+      <div style="margin-top:8px;">
+        <span>Standard Balls: <span id="standardCount">0</span></span><br>
+        <span>Great Balls: <span id="greatCount">0</span></span><br>
+        <span>Ultra Balls: <span id="ultraCount">0</span></span>
+      </div>
+    </div>
+
+    <div class="panel" style="flex: 0 0 260px;">
+      <strong>Pet Stats</strong>
+      <div id="petStatsPanel"></div>
+    </div>
+    <div class="panel" style="flex: 0 0 260px;">
+      <strong>Shop</strong>
+      <div id="shopPanel"></div>
+      <strong>Battle Ball</strong>
+      <select id="ballSelect">
+        <option value="standard">Standard Ball</option>
+        <option value="great">Great Ball</option>
+        <option value="ultra">Ultra Ball</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- All JavaScript is now in a single script tag below -->
+  <!-- JavaScript moved to main script tag below -->
+  <div id="battle-screen">
+    <div id="battle-card">
+      <h2>Battle!</h2>
+      <div class="battle-container">
+        <div class="battle-side">
+          <div id="battlePetInfo"></div>
+          <button id="attackBtn">Attack</button>
+          <button id="runBtn">Run</button>
+        </div>
+        <div class="battle-side">
+          <div id="wildInfo"></div>
+          <button id="pokeballBtn">Throw Ball</button>
+        </div>
+      </div>
+      <div id="battleSwitch"></div>
+      <div class="battle-log" id="battleLog"></div>
+      <div id="turnInfo"></div>
+    </div>
+  </div>
+
+  <script>
+            // --- Prevent background interaction when codeGate is open, but allow typing in the input/button ---
+            function blockBackground(e) {
+              if (codeGate && codeGate.style.display !== 'none') {
+                // Allow typing in the access code input and clicking the button
+                if (
+                  (e.target === accessCodeInput) ||
+                  (e.target === accessCodeBtn) ||
+                  (e.target.closest && e.target.closest('#codeGate'))
+                ) {
+                  return;
+                }
+                e.stopPropagation();
+                e.preventDefault();
+                return false;
+              }
+            }
+            // Block pointer and keyboard events on the whole document when codeGate is open
+            ['keydown','keyup','mousedown','mouseup','click','touchstart','touchend','wheel'].forEach(evt => {
+              document.addEventListener(evt, blockBackground, true);
+            });
+        // --- Access Code Gate ---
+        const ACCESS_CODE = "letmein"; // Change this to your desired code
+        const codeGate = document.getElementById('codeGate');
+        const accessCodeInput = document.getElementById('accessCodeInput');
+        const accessCodeBtn = document.getElementById('accessCodeBtn');
+        const accessCodeMsg = document.getElementById('accessCodeMsg');
+        function unlockGame() {
+          codeGate.style.display = 'none';
+        }
+        function checkAccessCode() {
+          if (accessCodeInput.value.trim() === ACCESS_CODE) {
+            unlockGame();
+          } else {
+            accessCodeMsg.textContent = 'Incorrect code. Try again.';
+          }
+        }
+        accessCodeBtn.addEventListener('click', checkAccessCode);
+        accessCodeInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') checkAccessCode(); });
+        // Prevent game interaction until code is entered
+        window.addEventListener('DOMContentLoaded', () => {
+          codeGate.style.display = 'flex';
+          accessCodeInput.focus();
+        });
+    const inventoryPanel = document.getElementById('inventoryPanel');
+    const petStatsPanel = document.getElementById('petStatsPanel');
+
+    function updateInventoryUi() {
+      if (!inventoryPanel) return;
+      inventoryPanel.innerHTML = `
+        <p>Standard Balls: <strong>${state.balls.standard}</strong></p>
+        <p>Great Balls: <strong>${state.balls.great}</strong></p>
+        <p>Ultra Balls: <strong>${state.balls.ultra}</strong></p>
+        <!-- Add more items here as needed -->
+      `;
+    }
+
+    function updatePetStatsUi() {
+      if (!petStatsPanel) return;
+      if (!playerPets.length) {
+        petStatsPanel.innerHTML = '<p>No pets in party.</p>';
+        return;
+      }
+      petStatsPanel.innerHTML = playerPets.map((pet, i) => `
+        <div style="margin-bottom:10px; border-bottom:1px solid #334; padding-bottom:6px;">
+          <strong>${pet.name}</strong> (Lv ${pet.level})<br>
+          HP: ${pet.hp} / ${pet.maxHp}<br>
+          Attack: ${pet.attack}<br>
+          EXP: ${pet.exp} / ${pet.level * 10}
+        </div>
+      `).join('');
+    }
+
+    // ...existing code continues (all your game logic JS goes here, after these functions)...
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const pokeballCountEl = document.getElementById('standardCount');
+    const greatCountEl = document.getElementById('greatCount');
+    const ultraCountEl = document.getElementById('ultraCount');
+    const gameStateEl = document.getElementById('gameState');
+    const moneyCountEl = document.getElementById('moneyCount');
+    const messageEl = document.getElementById('message');
+    const petInfoEl = document.getElementById('petInfo');
+    const wildInfoEl = document.getElementById('wildInfo');
+    const battlePetInfoEl = document.getElementById('battlePetInfo');
+    const turnInfoEl = document.getElementById('turnInfo');
+    const battleLogEl = document.getElementById('battleLog');
+    const battleSwitchEl = document.getElementById('battleSwitch');
+    const shopPanel = document.getElementById('shopPanel');
+    const ballSelect = document.getElementById('ballSelect');
+    const battleScreen = document.getElementById('battle-screen');
+    const attackBtn = document.getElementById('attackBtn');
+    const pokeballBtn = document.getElementById('pokeballBtn');
+    const runBtn = document.getElementById('runBtn');
+
+    const keys = {};
+    const state = {
+      mode: 'explore',
+      wild: null,
+      money: 120,
+      balls: {
+        standard: 5,
+        great: 0,
+        ultra: 0,
+      },
+      activePetIndex: 0,
+      turn: 'player',
+      battleLog: [],
+      message: 'Choose your starter Spocketbot.',
+    };
+
+const isMobile = window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent);
+const saveKey = isMobile ? 'petAdventure_mobile' : 'petAdventure_desktop';
+
+function saveGame() {
+  localStorage.setItem(saveKey, JSON.stringify({
+    playerPets,
+    money: state.money,
+    balls: state.balls,
+    activePetIndex: state.activePetIndex
+  }));
+}
+
+function loadGame() {
+  const data = localStorage.getItem(saveKey);
+  if (data) {
+    try {
+      const parsed = JSON.parse(data);
+      playerPets = parsed.playerPets || [];
+      state.money = parsed.money || 120;
+      state.balls = parsed.balls || { standard: 5, great: 0, ultra: 0 };
+      state.activePetIndex = parsed.activePetIndex || 0;
+    } catch (e) {
+      console.error('Failed to load save data', e);
+    }
+  }
+}
+
+const spawnZones = {
+  grass: [
+   { x: 80, y: 80 },
+    { x: 140, y: 240 },
+    { x: 100, y: 360 },
+  ],
+  rock: [
+    { x: 560, y: 60 },
+    { x: 620, y: 180 },
+    { x: 520, y: 320 },
+  ],
+  water: [
+    { x: 260, y: 60 },
+    { x: 340, y: 140 },
+    { x: 420, y: 320 },
+  ],
+  legendary: [
+    { x: 380, y: 90 },
+    { x: 380, y: 360 },
+  ],
+  mythical: [
+    { x: 360, y: 220 },
+  ],
+};
+
+    const tiles = [
+      { x: 0, y: 0, w: 800, h: 500, color: 'red' },
+      { x: 40, y: 40, w: 720, h: 420, color: '#81C784' },
+    ];
+
+    const pathRects = [
+      { x: 80, y: 0, w: 160, h: 500 },
+      { x: 240, y: 220, w: 320, h: 80 },
+      { x: 560, y: 0, w: 160, h: 500 },
+      { x: 0, y: 180, w: 80, h: 120 },
+      { x: 680, y: 180, w: 120, h: 120 },
+    ];
+
+    const healStations = [
+      { x: 20, y: 20, w: 40, h: 40 },
+      { x: 740, y: 20, w: 40, h: 40 },
+      { x: 20, y: 440, w: 40, h: 40 },
+      { x: 740, y: 440, w: 40, h: 40 },
+      // Additional heal stations (restored)
+      { x: 120, y: 100, w: 60, h: 60 },
+      { x: 620, y: 340, w: 60, h: 60 },
+    ];
+
+    const wildTemplates = [
+      {
+        name: 'Leafmouse',
+        texture: 'leafmouse',
+        type: 'grass',
+        baseLevel: 2,
+        maxLevel: 4,
+        maxHp: 24,
+        attack: 6,
+        color: '#90ee90',
+        size: 24,
+        legendary: false,
+        mythical: false,
+        spawnWeight: 40,
+        evolves: [
+          { level: 15, name: 'Leafcat', maxHp: 62, attack: 16, texture: 'leafcat' },
+        ],
+      },
+      {
+        name: 'Stoneclaw',
+        texture: 'stoneclaw',
+        textureUrl: 'https://ibb.co/ccdXmGB5',
+        type: 'rock',
+        baseLevel: 5,
+        maxLevel: 8,
+        maxHp: 34,
+        attack: 10,
+        color: '#bdb76b',
+        size: 26,
+        legendary: false,
+        mythical: false,
+        spawnWeight: 30,
+        evolves: [
+          { level: 20, name: 'Stonebeast', maxHp: 78, attack: 20, texture: 'stonebeast', textureUrl: 'https://ibb.co/k2Q8BtBL' },
+        ],
+      },
+      {
+        name: 'Aqualoon',
+        texture: 'aqualoon',
+        textureUrl: 'https://i.ibb.co/gZPBnkJR/Aqualoon.png',
+        type: 'water',
+        baseLevel: 7,
+        maxLevel: 11,
+        maxHp: 46,
+        attack: 12,
+        color: '#65c3ff',
+        size: 40,
+        legendary: false,
+        mythical: false,
+        spawnWeight: 25,
+        evolves: [
+          { level: 18, name: 'Aquaking', maxHp: 74, attack: 18, texture: 'aquaking', textureUrl: 'https://i.ibb.co/hp5RnPD/Untitled6-20260408234542.png', type: 'water', isLegendary: true, legendary: true },
+        ],
+      },
+      {
+        name: 'Skyflare',
+        texture: 'skyflare',
+        type: 'flying-fire',
+        zone: 'legendary',
+        baseLevel: 15,
+        maxLevel: 18,
+        maxHp: 70,
+        attack: 18,
+        color: '#f4d03f',
+        size: 34,
+        legendary: true,
+        mythical: false,
+        spawnWeight: 4,
+        evolves: [],
+      },
+      {
+        name: 'Aetherion',
+        texture: 'aetherion',
+        type: 'flying-rock',
+        zone: 'mythical',
+        baseLevel: 18,
+        maxLevel: 22,
+        maxHp: 85,
+        attack: 22,
+        color: '#b97dfb',
+        size: 36,
+        legendary: true,
+        mythical: true,
+        spawnWeight: 1,
+        evolves: [],
+      },
+    ];
+
+    const wildAnimals = [];
+
+    let playerPets = [];
+
+    const ballTypes = {
+      standard: { price: 20, multiplier: 1, label: 'Standard Ball', typeBonus: { grass: 1.0, rock: 0.9, water: 1.1, legendary: 0.6, mythical: 0.45, 'flying-fire': 1.0, 'flying-rock': 1.0, 'fire-dark': 1.0 } },
+      great: { price: 80, multiplier: 1.5, label: 'Great Ball', typeBonus: { grass: 1.2, rock: 1.0, water: 1.2, legendary: 0.75, mythical: 0.6, 'flying-fire': 1.2, 'flying-rock': 1.0, 'fire-dark': 1.2 } },
+      ultra: { price: 200, multiplier: 2.2, label: 'Ultra Ball', typeBonus: { grass: 1.4, rock: 1.1, water: 1.3, legendary: 0.9, mythical: 0.75, 'flying-fire': 1.4, 'flying-rock': 1.1, 'fire-dark': 1.4 } },
+    };
+
+    const starterOptions = {
+      flarecub: {
+        name: 'Flarecub',
+        texture: 'flarecub',
+        level: 1,
+        exp: 0,
+        stage: 1,
+        maxHp: 38,
+        hp: 38,
+        attack: 10,
+        w: 32,
+        h: 32,
+        evolves: [
+          { level: 10, name: 'Flareling', maxHp: 62, attack: 16, texture: 'flareling' },
+          { level: 36, name: 'Blazewolf', maxHp: 98, attack: 26, texture: 'blazewolf', type: 'fire-dark' },
+        ],
+        isLegendary: false,
+      },
+      leafmouse: {
+        name: 'Leafmouse',
+        texture: 'leafmouse',
+        level: 1,
+        exp: 0,
+        stage: 1,
+        maxHp: 24,
+        hp: 24,
+        attack: 6,
+        w: 24,
+        h: 24,
+        evolves: [
+          { level: 15, name: 'Leafcat', maxHp: 62, attack: 16, texture: 'leafcat' },
+        ],
+        isLegendary: false,
+      },
+      stoneclaw: {
+        name: 'Stoneclaw',
+        texture: 'stoneclaw',
+        level: 1,
+        exp: 0,
+        stage: 1,
+        maxHp: 34,
+        hp: 34,
+        attack: 10,
+        w: 26,
+        h: 26,
+        evolves: [
+          { level: 20, name: 'Stonebeast', maxHp: 78, attack: 20, texture: 'stonebeast' },
+        ],
+        isLegendary: false,
+      },
+    };
+
+    const player = {
+      x: 360,
+      y: 220,
+      w: 54,
+      h: 64,
+      speed: 3,
+      textureUrl: 'https://i.ibb.co/MDsXTWth/Untitled10-20260409180048.png',
+      img: null
+    };
+
+    function currentPet() {
+      return playerPets[state.activePetIndex] || playerPets[0];
+    }
+
+    function rectangleIntersect(a, b) {
+      return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
+    }
+
+    function randomBetween(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function chooseWildTemplate() {
+      const total = wildTemplates.reduce((sum, template) => sum + template.spawnWeight, 0);
+      let pick = Math.random() * total;
+      return wildTemplates.find((template) => {
+        pick -= template.spawnWeight;
+        return pick <= 0;
+      });
+    }
+
+    function spawnWild(template) {
+      const zone = spawnZones[template.zone || template.type] || spawnZones.grass;
+      const spot = zone[Math.floor(Math.random() * zone.length)];
+      return {
+        name: template.name,
+        type: template.type,
+        texture: template.texture,
+        textureUrl: template.textureUrl,
+        level: randomBetween(template.baseLevel, template.maxLevel),
+        x: spot.x + randomBetween(0, 24),
+        y: spot.y + randomBetween(0, 24),
+        w: template.size,
+        h: template.size,
+        maxHp: template.maxHp,
+        hp: template.maxHp,
+        attack: template.attack,
+        color: template.color,
+        legendary: template.legendary,
+        mythical: template.mythical || false,
+        evolves: template.evolves || [],
+      };
+    }
+
+    function refillWilds() {
+      while (wildAnimals.length < 5) {
+        const template = chooseWildTemplate();
+        wildAnimals.push(spawnWild(template));
+      }
+    }
+
+    function updateShopUi() {
+      shopPanel.innerHTML = Object.entries(ballTypes)
+        .map(([key, ball]) => `
+          <button class="shop-button" data-ball="${key}">${ball.label} - $${ball.price}</button>
+        `)
+        .join('');
+    }
+
+    function createHealthBar(current, max) {
+      const percent = Math.max(0, Math.min(100, Math.round((current / max) * 100)));
+      const colorClass = percent < 35 ? 'low' : '';
+      return `
+        <div class="health-bar"><div class="health-fill ${colorClass}" style="width:${percent}%"></div></div>
+        <p style="margin: 0; font-size: 13px;">${current} / ${max}</p>
+      `;
+    }
+
+    function updatePetUi() {
+      updateInventoryUi();
+      updatePetStatsUi();
+      const pet = currentPet();
+      if (!pet) {
+        petInfoEl.innerHTML = '<p>No active pet.</p>';
+        moneyCountEl.textContent = state.money;
+        pokeballCountEl.textContent = state.balls.standard;
+        greatCountEl.textContent = state.balls.great;
+        ultraCountEl.textContent = state.balls.ultra;
+        gameStateEl.textContent = state.mode === 'explore' ? 'Explore' : 'Battle';
+        messageEl.textContent = state.message;
+        return;
+      }
+      petInfoEl.innerHTML = `
+        <p>${pet.isLegendary ? '<span class="legendary">★ Legendary ★</span>' : ''}<strong>${pet.name}</strong> (Lv ${pet.level})</p>
+        <p>Attack: ${pet.attack}</p>
+        <p>EXP: ${pet.exp} / ${pet.level * 10}</p>
+        ${createHealthBar(pet.hp, pet.maxHp)}
+        <p><input id="textureUrlInput" type="text" placeholder="Texture URL" value="${pet.textureUrl || ''}" style="width: 100%; margin-top: 8px;"></p>
+      `;
+      moneyCountEl.textContent = state.money;
+      pokeballCountEl.textContent = state.balls.standard;
+      greatCountEl.textContent = state.balls.great;
+      ultraCountEl.textContent = state.balls.ultra;
+      gameStateEl.textContent = state.mode === 'explore' ? 'Explore' : 'Battle';
+      messageEl.textContent = state.message;
+      // Add event listener for the input
+      const input = document.getElementById('textureUrlInput');
+      if (input) {
+        input.addEventListener('change', (e) => {
+          setTextureUrl(e.target.value);
+        });
+      }
+    }
+
+    function setTextureUrl(url) {
+      const pet = currentPet();
+      if (pet) {
+        pet.textureUrl = url;
+        saveGame();
+      }
+    }
+
+    function updateBattleUi() {
+      if (!state.wild) return;
+      const wild = state.wild;
+      const pet = currentPet();
+      wildInfoEl.innerHTML = `
+        <p>${wild.legendary ? '<span class="legendary">★ Legendary ★</span>' : ''}<strong>${wild.name}</strong> (Lv ${wild.level})</p>
+        <p>Type: ${wild.type}${wild.mythical ? ' Mythical' : ''}</p>
+        ${createHealthBar(Math.max(0, wild.hp), wild.maxHp)}
+      `;
+      battlePetInfoEl.innerHTML = `
+        <p><strong>${pet.name}</strong> (Lv ${pet.level})</p>
+        <p>Attack: ${pet.attack}</p>
+        ${createHealthBar(pet.hp, pet.maxHp)}
+      `;
+      turnInfoEl.textContent = state.turn === 'player' ? 'Turn: Your Spocketbot' : 'Turn: Opponent';
+      updateBattleLog();
+      renderBattleSwitch();
+      updatePetUi();
+    }
+
+    function addBattleLog(message) {
+      state.battleLog.unshift(message);
+      if (state.battleLog.length > 6) state.battleLog.pop();
+    }
+
+    function updateBattleLog() {
+      if (!battleLogEl) return;
+      battleLogEl.innerHTML = state.battleLog
+        .map((entry) => `<p>${entry}</p>`)
+        .join('');
+    }
+
+    function renderBattleSwitch() {
+      if (!battleSwitchEl) return;
+      if (playerPets.length <= 1) {
+        battleSwitchEl.innerHTML = '<p style="margin:0; font-size:13px;">Capture more pets to switch during battle.</p>';
+        return;
+      }
+      battleSwitchEl.innerHTML = playerPets
+        .map((pet, index) => {
+          const active = index === state.activePetIndex;
+          const fainted = pet.hp <= 0;
+          const label = `${pet.name} Lv ${pet.level}${active ? ' (Active)' : ''}${fainted ? ' - Fainted' : ''}`;
+          return `<button class="party-button ${active ? 'active' : ''} ${fainted ? 'fainted' : ''}" data-index="${index}" ${active || fainted ? 'disabled' : ''}>${label}</button>`;
+        })
+        .join('');
+    }
+
+    function switchPet(index) {
+      if (state.mode !== 'battle') return;
+      if (state.activePetIndex === index) return;
+      const pet = playerPets[index];
+      if (!pet || pet.hp <= 0) {
+        state.message = 'Cannot switch to a fainted Spocketbot.';
+        updateBattleUi();
+        return;
+      }
+      state.activePetIndex = index;
+      state.turn = 'wild';
+      state.message = `Switched to ${pet.name}!`;
+      addBattleLog(`Switched to ${pet.name}!`);
+      updateBattleUi();
+      window.setTimeout(() => {
+        if (state.mode === 'battle' && state.turn === 'wild') wildAttack();
+      }, 700);
+    }
+
+    function checkHealStation() {
+      const station = healStations.find((s) => rectangleIntersect(player, s));
+      if (station) {
+        const pet = currentPet();
+        if (pet && pet.hp < pet.maxHp) {
+          pet.hp = pet.maxHp;
+          state.message = `${pet.name} is fully healed!`;
+          updatePetUi();
+        }
+      }
+    }
+
+    function findWildCollision() {
+      return wildAnimals.find((wild) => rectangleIntersect(player, wild));
+    }
+
+    function startBattle(wild) {
+      const pet = currentPet();
+      if (!pet || pet.hp <= 0) {
+        state.message = `${pet ? pet.name : 'No pet'} is fainted! Heal it before fighting.`;
+        updatePetUi();
+        return;
+      }
+      state.mode = 'battle';
+      state.wild = wild;
+      state.turn = 'player';
+      state.battleLog = [`A wild ${wild.name} appeared!`];
+      state.message = `A wild ${wild.name} appeared!`;
+      battleScreen.style.display = 'flex';
+      updateBattleUi();
+    }
+
+    function endBattle(message) {
+      state.mode = 'explore';
+      state.wild = null;
+      // preserve battle result message and append auto-heal notice
+      const pet = currentPet();
+      if (pet) {
+        pet.hp = pet.maxHp;
+        state.message = `${message} ${pet.name} was healed after the battle.`;
+      } else {
+        state.message = message;
+      }
+      battleScreen.style.display = 'none';
+      updatePetUi();
+      saveGame();
+    }
+
+    function gainExp(amount) {
+      const pet = currentPet();
+      pet.exp += amount;
+      let required = pet.level * 10;
+      while (pet.exp >= required) {
+        pet.exp -= required;
+        pet.level += 1;
+        pet.maxHp += 8;
+        pet.attack += 2;
+        pet.hp = Math.min(pet.hp + 12, pet.maxHp);
+        state.message = `${pet.name} reached level ${pet.level}!`;
+        checkEvolution();
+        required = pet.level * 10;
+      }
+    }
+
+    function showEvolutionPopup(pet) {
+      const popup = document.getElementById('evolutionPopup');
+      const spriteDiv = document.getElementById('evolutionSprite');
+      const nameDiv = document.getElementById('evolutionName');
+      if (!popup || !spriteDiv || !nameDiv) return;
+      // Draw the evolved pet's sprite
+      let imgHtml = '';
+      if (pet.textureUrl) {
+        imgHtml = `<img src="${pet.textureUrl}" alt="${pet.name}" style="width:120px; height:120px; image-rendering:pixelated; border-radius:16px; background:#fff;">`;
+      } else {
+        imgHtml = `<div style="width:120px; height:120px; background:#fff; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:2em; color:#333;">?</div>`;
+      }
+      spriteDiv.innerHTML = imgHtml;
+      nameDiv.textContent = pet.name;
+      popup.style.display = 'flex';
+      // Hide popup on button click
+      const closeBtn = document.getElementById('closeEvolutionBtn');
+      if (closeBtn) {
+        closeBtn.onclick = () => { popup.style.display = 'none'; updatePetUi(); };
+      }
+    }
+
+    function checkEvolution() {
+      const pet = currentPet();
+      const nextStage = pet.evolves[pet.stage - 1];
+      if (nextStage && pet.level >= nextStage.level) {
+        pet.name = nextStage.name;
+        pet.maxHp = nextStage.maxHp;
+        pet.attack = nextStage.attack;
+        pet.texture = nextStage.texture || pet.texture;
+        pet.textureUrl = nextStage.textureUrl || pet.textureUrl;
+        pet.hp = pet.maxHp;
+        pet.stage += 1;
+        state.message = `${pet.name} evolved at level ${pet.level}!`;
+        showEvolutionPopup(pet);
+      }
+    }
+
+    function calculateDamage(attacker) {
+      return Math.max(1, Math.floor(attacker.attack + attacker.level * 0.8 + Math.random() * (attacker.level / 2 + 1)));
+    }
+
+    function playerAttack() {
+      if (state.turn !== 'player' || !state.wild) {
+        state.message = 'Wait for your turn.';
+        updateBattleUi();
+        return;
+      }
+      const pet = currentPet();
+      const wild = state.wild;
+      const damage = calculateDamage(pet);
+      wild.hp -= damage;
+      const msg = `${pet.name} dealt ${damage} damage to ${wild.name}.`;
+      state.message = msg;
+      addBattleLog(msg);
+      updateBattleUi();
+      if (wild.hp <= 0) {
+        awardBattleRewards(wild, false);
+        gainExp(wild.level * 6); // Grant EXP for defeating wild pet
+        wildAnimals.splice(wildAnimals.indexOf(wild), 1);
+        addBattleLog(`You defeated ${wild.name}!`);
+        endBattle(`You defeated ${wild.name}!`);
+        spawnAfterDelay();
+        return;
+      }
+      state.turn = 'wild';
+      updateBattleUi();
+      window.setTimeout(() => {
+        if (state.mode === 'battle' && state.turn === 'wild') wildAttack();
+      }, 700);
+    }
+
+    function awardBattleRewards(wild, captured) {
+      const reward = wild.level * (captured ? 14 : 8);
+      state.money += reward;
+      state.message = `Earned $${reward} from ${captured ? 'capture' : 'defeat'}!`;
+      updatePetUi();
+      saveGame();
+    }
+
+    function wildAttack() {
+      if (!state.wild || state.turn !== 'wild') return;
+      const pet = currentPet();
+      const wild = state.wild;
+      const damage = calculateDamage(wild);
+      pet.hp -= damage;
+      const msg = `${wild.name} hit ${pet.name} for ${damage}.`;
+      state.message = msg;
+      addBattleLog(msg);
+      if (pet.hp <= 0) {
+        pet.hp = 0;
+        endBattle(`${pet.name} fainted! Return to a heal station.`);
+        spawnAfterDelay();
+        return;
+      }
+      state.turn = 'player';
+      updateBattleUi();
+    }
+
+    function throwPokeball() {
+      if (state.turn !== 'player' || !state.wild) {
+        state.message = 'You can only throw a ball on your turn.';
+        updateBattleUi();
+        return;
+      }
+      const selected = ballSelect.value;
+      if (state.balls[selected] <= 0) {
+        state.message = `No ${ballTypes[selected].label}s left!`;
+        updateBattleUi();
+        return;
+      }
+      state.balls[selected] -= 1;
+      const wild = state.wild;
+      const baseChance = 0.18 + (currentPet().level - wild.level) * 0.02;
+      const typeBonus = ballTypes[selected].typeBonus[wild.type] || 1;
+      const rarePenalty = wild.mythical ? 2.3 : wild.legendary ? 1.7 : 1;
+      const luck = ballTypes[selected].multiplier * typeBonus;
+      const chance = Math.min(Math.max(baseChance * luck / rarePenalty, 0.03), 0.82);
+      const success = Math.random() < chance;
+      if (success) {
+        awardBattleRewards(wild, true);
+        state.message = `Captured ${wild.name}!`;
+        addBattleLog(`Captured ${wild.name}!`);
+        playerPets.push({
+          name: wild.name,
+          level: wild.level,
+          exp: 0,
+          stage: 1,
+          maxHp: wild.maxHp,
+          hp: wild.maxHp,
+          attack: wild.attack,
+          w: wild.w,
+          h: wild.h,
+          texture: wild.texture,
+          textureUrl: wild.textureUrl,
+          evolves: wild.evolves,
+          isLegendary: wild.legendary,
+        });
+        wildAnimals.splice(wildAnimals.indexOf(wild), 1);
+        endBattle(`You captured ${wild.name}!`);
+        spawnAfterDelay();
+      } else {
+        state.message = `${wild.name} broke free!`;
+        addBattleLog(`${wild.name} broke free!`);
+        state.turn = 'wild';
+        updateBattleUi();
+        window.setTimeout(() => {
+          if (state.mode === 'battle' && state.turn === 'wild') wildAttack();
+        }, 700);
+      }
+    }
+
+    function tryRun() {
+      if (state.turn !== 'player') {
+        state.message = 'You can only run on your turn.';
+        updateBattleUi();
+        return;
+      }
+      if (Math.random() < 0.6) {
+        addBattleLog('You successfully ran away.');
+        endBattle('You successfully ran away.');
+      } else {
+        state.message = 'Escape failed!';
+        addBattleLog('Escape failed!');
+        state.turn = 'wild';
+        updateBattleUi();
+        window.setTimeout(() => {
+          if (state.mode === 'battle' && state.turn === 'wild') wildAttack();
+        }, 700);
+      }
+    }
+
+    function handleExploration() {
+      let dx = 0;
+      let dy = 0;
+      if (keys['w']) dy -= player.speed;
+      if (keys['s']) dy += player.speed;
+      if (keys['a']) dx -= player.speed;
+      if (keys['d']) dx += player.speed;
+      player.x = Math.max(16, Math.min(canvas.width - player.w - 16, player.x + dx));
+      player.y = Math.max(16, Math.min(canvas.height - player.h - 16, player.y + dy));
+      if (dx !== 0 || dy !== 0) console.log('player moved', player.x, player.y, 'dx', dx, 'dy', dy);
+      checkHealStation();
+      const pet = currentPet();
+      if (pet && pet.hp <= 0) {
+        state.message = `${pet.name} is fainted! Heal it before fighting.`;
+        updatePetUi();
+      }
+      const wild = findWildCollision();
+      if (wild) {
+        if (pet && pet.hp <= 0) {
+          // Allow movement but prevent starting a battle when your active pet is fainted
+          state.message = `${pet.name} is fainted! Return to a heal station.`;
+          updatePetUi();
+        } else {
+          startBattle(wild);
+        }
+      }
+    }
+
+    function drawRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawText(text, x, y, color = '#eef', size = '14px') {
+      ctx.fillStyle = color;
+      ctx.font = `${size} Arial, sans-serif`;
+      ctx.fillText(text, x, y);
+    }
+
+    const textureDrawers = {
+      flarecub(entity, x, y, s = 1) {
+        ctx.fillStyle = '#e15210';
+        ctx.fillRect(x + 4 * s, y + 4 * s, 8 * s, 5 * s);
+        ctx.fillStyle = '#f2975d';
+        ctx.fillRect(x + 5 * s, y + 9 * s, 6 * s, 4 * s);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x + 6 * s, y + 5 * s, 2 * s, 2 * s);
+        ctx.fillRect(x + 10 * s, y + 5 * s, 2 * s, 2 * s);
+        ctx.fillStyle = '#ff8c00';
+        ctx.fillRect(x + 12 * s, y + 1 * s, 4 * s, 10 * s);
+      },
+      flareling(entity, x, y, s = 1) {
+        ctx.fillStyle = '#ff5722';
+        ctx.fillRect(x + 4 * s, y + 4 * s, 10 * s, 6 * s);
+        ctx.fillStyle = '#ffab91';
+        ctx.fillRect(x + 5 * s, y + 10 * s, 8 * s, 4 * s);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x + 6 * s, y + 5 * s, 2 * s, 2 * s);
+        ctx.fillRect(x + 10 * s, y + 5 * s, 2 * s, 2 * s);
+        ctx.fillStyle = '#ff9800';
+        ctx.fillRect(x + 14 * s, y + 1 * s, 4 * s, 12 * s);
+      },
+      blazewolf(entity, x, y, s = 1) {
+        ctx.fillStyle = '#d84315';
+        ctx.fillRect(x + 3 * s, y + 4 * s, 14 * s, 8 * s);
+        ctx.fillStyle = '#ff8a65';
+        ctx.fillRect(x + 4 * s, y + 12 * s, 10 * s, 4 * s);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x + 6 * s, y + 5 * s, 2 * s, 2 * s);
+        ctx.fillRect(x + 10 * s, y + 5 * s, 2 * s, 2 * s);
+        ctx.fillStyle = '#ff5722';
+        ctx.fillRect(x + 16 * s, y + 1 * s, 4 * s, 14 * s);
+      },
+      leafmouse(entity, x, y, s = 1) {
+        ctx.fillStyle = '#86c57a';
+        ctx.fillRect(x + 5 * s, y + 5 * s, 10 * s, 10 * s);
+        ctx.fillStyle = '#b7f08f';
+        ctx.fillRect(x + 4 * s, y + 2 * s, 4 * s, 4 * s);
+        ctx.fillRect(x + 14 * s, y + 2 * s, 4 * s, 4 * s);
+        ctx.fillStyle = '#2d5f2f';
+        ctx.fillRect(x + 7 * s, y + 8 * s, 2 * s, 2 * s);
+        ctx.fillRect(x + 11 * s, y + 8 * s, 2 * s, 2 * s);
+      },
+      stoneclaw(entity, x, y, s = 1) {
+        ctx.fillStyle = '#a49a7a';
+        ctx.fillRect(x + 5 * s, y + 4 * s, 12 * s, 10 * s);
+        ctx.fillStyle = '#7b6f54';
+        ctx.fillRect(x + 7 * s, y + 8 * s, 4 * s, 3 * s);
+        ctx.fillStyle = '#766a4c';
+        ctx.fillRect(x + 3 * s, y + 10 * s, 5 * s, 2 * s);
+      },
+      aqualoon(entity, x, y, s = 1) {
+        ctx.fillStyle = '#6ec0ff';
+        ctx.fillRect(x + 3 * s, y + 6 * s, 14 * s, 7 * s);
+        ctx.fillStyle = '#4a9fff';
+        ctx.fillRect(x + 11 * s, y + 4 * s, 5 * s, 5 * s);
+        ctx.fillStyle = '#1f5a7f';
+        ctx.fillRect(x + 6 * s, y + 8 * s, 4 * s, 2 * s);
+      },
+      skyflare(entity, x, y, s = 1) {
+        ctx.fillStyle = '#f6df2d';
+        ctx.fillRect(x + 3 * s, y + 4 * s, 16 * s, 10 * s);
+        ctx.fillStyle = '#ff9e00';
+        ctx.fillRect(x + 11 * s, y + 1 * s, 5 * s, 9 * s);
+        ctx.fillStyle = '#d95c00';
+        ctx.fillRect(x + 7 * s, y + 11 * s, 2 * s, 3 * s);
+      },
+      aetherion(entity, x, y, s = 1) {
+        ctx.fillStyle = '#b97dfb';
+        ctx.fillRect(x + 3 * s, y + 4 * s, 16 * s, 10 * s);
+        ctx.fillStyle = '#7a3fff';
+        ctx.fillRect(x + 6 * s, y + 2 * s, 6 * s, 5 * s);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x + 9 * s, y + 8 * s, 2 * s, 2 * s);
+      },
+      leafcat(entity, x, y, s = 1) {
+        ctx.fillStyle = '#4caf50';
+        ctx.fillRect(x + 5 * s, y + 5 * s, 12 * s, 10 * s);
+        ctx.fillStyle = '#81c784';
+        ctx.fillRect(x + 3 * s, y + 2 * s, 6 * s, 4 * s);
+        ctx.fillRect(x + 13 * s, y + 2 * s, 6 * s, 4 * s);
+        ctx.fillStyle = '#388e3c';
+        ctx.fillRect(x + 8 * s, y + 8 * s, 2 * s, 2 * s);
+        ctx.fillRect(x + 12 * s, y + 8 * s, 2 * s, 2 * s);
+      },
+      stonebeast(entity, x, y, s = 1) {
+        ctx.fillStyle = '#8d6e63';
+        ctx.fillRect(x + 4 * s, y + 4 * s, 14 * s, 12 * s);
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(x + 6 * s, y + 8 * s, 6 * s, 4 * s);
+        ctx.fillStyle = '#a1887f';
+        ctx.fillRect(x + 2 * s, y + 10 * s, 6 * s, 3 * s);
+        ctx.fillRect(x + 14 * s, y + 10 * s, 6 * s, 3 * s);
+      },
+      aquaking(entity, x, y, s = 1) {
+        ctx.fillStyle = '#2196f3';
+        ctx.fillRect(x + 3 * s, y + 5 * s, 16 * s, 10 * s);
+        ctx.fillStyle = '#1976d2';
+        ctx.fillRect(x + 6 * s, y + 2 * s, 6 * s, 5 * s);
+        ctx.fillStyle = '#0d47a1';
+        ctx.fillRect(x + 8 * s, y + 8 * s, 2 * s, 2 * s);
+        ctx.fillRect(x + 12 * s, y + 8 * s, 2 * s, 2 * s);
+      },
+    };
+
+    const textureImages = {};
+
+    function getTextureImage(url) {
+      if (!textureImages[url]) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+        textureImages[url] = img;
+      }
+      return textureImages[url];
+    }
+
+    function drawMap() {
+      tiles.forEach((tile) => drawRect(tile.x, tile.y, tile.w, tile.h, tile.color));
+      pathRects.forEach((path) => drawRect(path.x, path.y, path.w, path.h, '#8f6f48'));
+      healStations.forEach((st) => {
+        drawRect(st.x, st.y, st.w, st.h, '#29c47a');
+        drawText('HEAL', st.x + 8, st.y + 36, '#fff', '14px');
+      });
+      drawRect(0, 0, 800, 16, '#1d2740');
+      drawRect(0, 484, 800, 16, '#1d2740');
+      drawRect(0, 0, 16, 500, '#1d2740');
+      drawRect(784, 0, 16, 500, '#1d2740');
+    }
+
+    function drawPlayerSprite(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (!player.img && player.textureUrl) {
+        player.img = new window.Image();
+        player.img.src = player.textureUrl;
+      }
+      if (player.img && player.img.complete && player.img.naturalWidth) {
+        ctx.drawImage(player.img, -player.w/2, -player.h/2, player.w, player.h);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(6, 2, 12, 12);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(6, 14, 12, 12);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(8, 4, 4, 4);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(10, 6, 2, 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(4, 20, 6, 4);
+        ctx.fillRect(14, 20, 6, 4);
+      }
+      ctx.restore();
+    }
+
+    function drawPetSprite(entity, x, y, scale = 1) {
+      const s = scale;
+      if (entity.drawSprite) {
+        entity.drawSprite(entity, x, y, s);
+        return;
+      }
+      const textureKey = entity.texture;
+      const textureUrl = entity.textureUrl || (typeof textureKey === 'string' && /^https?:\/\//.test(textureKey) ? textureKey : null);
+      if (textureUrl) {
+        const img = getTextureImage(textureUrl);
+        if (img.complete && img.naturalWidth) {
+          ctx.drawImage(img, x, y, entity.w || 24, entity.h || 24);
+          return;
+        }
+      }
+      if (textureKey && textureDrawers[textureKey]) {
+        textureDrawers[textureKey](entity, x, y, s);
+        return;
+      }
+      if (entity.type === 'grass') {
+        ctx.fillStyle = '#6ecb6d';
+        ctx.fillRect(x + 4 * s, y + 6 * s, 10 * s, 7 * s);
+        ctx.fillStyle = '#3b7f3b';
+        ctx.fillRect(x + 6 * s, y + 2 * s, 6 * s, 5 * s);
+      } else if (entity.type === 'rock') {
+        ctx.fillStyle = '#a49a7a';
+        ctx.fillRect(x + 5 * s, y + 4 * s, 12 * s, 10 * s);
+        ctx.fillStyle = '#7b6f54';
+        ctx.fillRect(x + 7 * s, y + 8 * s, 4 * s, 3 * s);
+      } else if (entity.type === 'water') {
+        ctx.fillStyle = '#6ec0ff';
+        ctx.fillRect(x + 3 * s, y + 6 * s, 14 * s, 7 * s);
+        ctx.fillStyle = '#4a9fff';
+        ctx.fillRect(x + 11 * s, y + 4 * s, 5 * s, 5 * s);
+      } else if (entity.legendary) {
+        ctx.fillStyle = '#f6df2d';
+        ctx.fillRect(x + 3 * s, y + 4 * s, 16 * s, 10 * s);
+        ctx.fillStyle = '#ff9e00';
+        ctx.fillRect(x + 11 * s, y + 1 * s, 5 * s, 9 * s);
+      } else {
+        ctx.fillStyle = entity.color || '#ddd';
+        ctx.fillRect(x + 5 * s, y + 5 * s, 10 * s, 10 * s);
+      }
+    }
+
+    function drawGame() {
+      // Always schedule the next frame so rendering resumes after battle
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (state.mode === 'explore') {
+        drawMap();
+        wildAnimals.forEach((wild) => {
+          drawPetSprite(wild, wild.x, wild.y, 1);
+          drawText(`${wild.name} Lv ${wild.level}`, wild.x - 6, wild.y - 6, '#fff', '12px');
+        });
+        drawPlayerSprite(player.x, player.y);
+      }
+      requestAnimationFrame(drawGame);
+    }
+
+    function spawnAfterDelay() {
+      window.setTimeout(() => {
+        refillWilds();
+      }, 1200);
+    }
+
+    attackBtn.addEventListener('click', () => {
+      if (state.mode === 'battle' && state.wild) playerAttack();
+    });
+    pokeballBtn.addEventListener('click', () => {
+      if (state.mode === 'battle' && state.wild) throwPokeball();
+    });
+    runBtn.addEventListener('click', () => {
+      if (state.mode === 'battle') tryRun();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      keys[event.key.toLowerCase()] = true;
+      console.log('keydown', event.key.toLowerCase());
+      if (state.mode === 'explore' && ['w', 'a', 's', 'd'].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+      }
+    });
+
+    document.addEventListener('keyup', (event) => {
+      keys[event.key.toLowerCase()] = false;
+      console.log('keyup', event.key.toLowerCase());
+    });
+
+    shopPanel.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-ball]');
+      if (!button) return;
+      const ballKey = button.dataset.ball;
+      const cost = ballTypes[ballKey].price;
+      if (state.money < cost) {
+        state.message = `Not enough money for ${ballTypes[ballKey].label}.`;
+        updatePetUi();
+        return;
+      }
+      state.money -= cost;
+      state.balls[ballKey] += 1;
+      state.message = `Bought 1 ${ballTypes[ballKey].label}.`;
+      updatePetUi();
+      saveGame();
+    });
+
+    battleSwitchEl.addEventListener('click', (e) => {
+      if (e.target.classList.contains('party-button') && !e.target.disabled) {
+        const index = parseInt(e.target.dataset.index);
+        switchPet(index);
+      }
+    });
+
+    document.getElementById('chooseFlarecub').addEventListener('click', () => chooseStarter('flarecub'));
+    document.getElementById('chooseLeafmouse').addEventListener('click', () => chooseStarter('leafmouse'));
+    document.getElementById('chooseStoneclaw').addEventListener('click', () => chooseStarter('stoneclaw'));
+
+    function gameLoop() {
+      if (state.mode === 'explore') {
+        handleExploration();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      refillWilds();
+      state.mode = 'explore';
+      state.message = 'Use W A S D to move around.';
+      gameLoop();
+    }
+
+    function chooseStarter(key) {
+      playerPets = [starterOptions[key]];
+      document.getElementById('starterSelection').style.display = 'none';
+      startGame();
+      saveGame();
+    }
+
+    function init() {
+      loadGame();
+      if (playerPets.length === 0) {
+        document.getElementById('starterSelection').style.display = 'block';
+        state.message = 'Choose your starter Spocketbot.';
+      } else {
+        startGame();
+      }
+      updateShopUi();
+      updatePetUi();
+      drawGame();
+    }
+
+    init();
+  </script>
+</body>
+</html>
